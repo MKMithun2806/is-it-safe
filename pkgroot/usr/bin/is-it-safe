@@ -2,72 +2,116 @@
 import argparse
 import sys
 import os
+import logging
+import json
 from urllib.parse import urlparse
+import urllib3
 
-# Add local modules to path if running from source
-sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
+# Suppress insecure request warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.WARNING,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# System-wide module path
 sys.path.append('/usr/share/is-it-safe/modules')
 
 try:
     from waf import detect_waf
-except ImportError:
-    print("[!] Error: Could not load WAF module. Ensure 'requests' is installed.")
-    sys.exit(1)
-
-try:
     from ids_ips import detect_ids_ips
-except ImportError:
-    def detect_ids_ips(target):
-        return ["Skipped: 'scapy' not installed or IDS module missing"]
+    from network import identify_network_layer
+except ImportError as e:
+    print(f"[-] Error: Could not load modules: {e}")
+    sys.exit(1)
 
 def banner():
     print("""
     ╔╦╗╔═╗  ╦╔╦╗  ╔═╗╔═╗╔═╗╔═╗
      ║ ╚═╗  ║ ║   ╚═╗╠═╣╠╣ ║╣ 
     ╩ ╚═╝  ╩ ╩   ╚═╝╩ ╩╚  ╚═╝
-    Stealthy Security Layer Detector
+    Stealthy Security Layer Detector v2.0
     """)
 
-def main():
-    parser = argparse.ArgumentParser(description="is-it-safe: Stealthy WAF/IDS/IPS detector")
-    parser.add_argument("target", help="Target URL or Hostname (e.g., https://example.com or example.com)")
-    parser.add_argument("-s", "--stealth", action="store_true", help="Enable maximum stealth (higher jitter)")
-    
-    args = parser.parse_args()
-    banner()
-
-    target = args.target
+def validate_url(target):
+    if not target:
+        return None, "No target provided"
     if not target.startswith(('http://', 'https://')):
-        url = f"https://{target}"
-        host = target
-    else:
-        url = target
-        host = urlparse(target).netloc
+        target = f"https://{target}"
+    try:
+        parsed = urlparse(target)
+        if not parsed.netloc:
+            return None, "Invalid URL: missing hostname"
+        if parsed.scheme not in ('http', 'https'):
+            return None, f"Unsupported scheme: {parsed.scheme}"
+        return target, parsed.netloc
+    except Exception as e:
+        return None, f"URL parsing error: {e}"
 
-    print(f"[*] Starting scan for {target}...")
-    
-    waf_results = detect_waf(url)
-    ids_results = detect_ids_ips(host)
+def print_result(title, results, verbose=False):
+    print(f"\n[+] {title}:")
+    for r in results:
+        color = ""
+        if r.get("confidence") == "high":
+            color = "\033[92m" # Green
+        elif r.get("confidence") == "medium":
+            color = "\033[93m" # Yellow
+        
+        reset = "\033[0m"
+        print(f"  - {color}{r['name']}{reset} ({r['confidence']} confidence)")
+        if verbose and r.get("details"):
+            print(f"    \033[90m> {r['details']}\033[0m")
 
-    print("\n" + "="*40)
-    print(" SCAN RESULTS")
-    print("="*40)
-    
-    print("\n[+] WAF Detection:")
-    if waf_results:
-        for r in waf_results:
-            print(f"  - {r}")
-    else:
-        print("  - No obvious WAF detected.")
+def main():
+    parser = argparse.ArgumentParser(description="is-it-safe: Stealthy WAF/IDS/IPS detector v2.0")
+    parser.add_argument("target", help="Target URL or Hostname")
+    parser.add_argument("-s", "--stealth", action="store_true", help="Enable maximum stealth (higher jitter)")
+    parser.add_argument("--timeout", type=int, default=10, help="Request timeout in seconds")
+    parser.add_argument("--jitter", action="store_true", help="Add random delays between requests")
+    parser.add_argument("--verbose", action="store_true", help="Show detailed detection signals")
+    parser.add_argument("--json", action="store_true", help="Output results in JSON format")
+    args = parser.parse_args()
 
-    print("\n[+] IDS/IPS/Proxy Detection:")
-    if ids_results:
-        for r in ids_results:
-            print(f"  - {r}")
-    else:
-        print("  - No obvious IDS/IPS detected.")
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    url, host = validate_url(args.target)
+    if not url:
+        logger.error(host)
+        sys.exit(1)
+
+    if not args.json:
+        banner()
+        print(f"[*] Starting scan for {url}...")
     
-    print("\n" + "="*40)
+    # Run detections
+    waf_results = detect_waf(url, timeout=args.timeout, jitter=args.jitter or args.stealth)
+    network_results = identify_network_layer(url, host=host)
+    ids_results = detect_ids_ips(host, url=url, use_tcp=True)
+
+    results = {
+        "target": url,
+        "host": host,
+        "waf": waf_results,
+        "network": network_results,
+        "ids_ips": ids_results
+    }
+
+    if args.json:
+        print(json.dumps(results, indent=2))
+    else:
+        print("\n" + "="*50)
+        print(f" SCAN RESULTS FOR: {url}")
+        print("="*50)
+        
+        print_result("WAF Detection", waf_results, args.verbose)
+        print_result("Network Layer", network_results, args.verbose)
+        print_result("IDS/IPS Detection", ids_results, args.verbose)
+        
+        print("\n" + "="*50)
 
 if __name__ == "__main__":
     main()

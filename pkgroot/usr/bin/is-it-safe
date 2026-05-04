@@ -17,13 +17,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# System-wide module path
-sys.path.append('/usr/share/is-it-safe/modules')
+# Suppress verbose urllib3 retry warnings
+urllib3_logger = logging.getLogger('urllib3.util.retry')
+urllib3_logger.setLevel(logging.ERROR)
+urllib3.connectionpool = logging.getLogger('urllib3.connectionpool')
+urllib3.connectionpool.setLevel(logging.ERROR)
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
 
 try:
     from waf import detect_waf
     from ids_ips import detect_ids_ips
     from network import identify_network_layer
+    from fail2ban import detect_fail2ban
 except ImportError as e:
     print(f"[-] Error: Could not load modules: {e}")
     sys.exit(1)
@@ -33,23 +39,23 @@ def banner():
     ╔╦╗╔═╗  ╦╔╦╗  ╔═╗╔═╗╔═╗╔═╗
      ║ ╚═╗  ║ ║   ╚═╗╠═╣╠╣ ║╣ 
     ╩ ╚═╝  ╩ ╩   ╚═╝╩ ╩╚  ╚═╝
-    Stealthy Security Layer Detector v2.0
+    Hey there! Security Layer Detector v4.0
     """)
 
 def validate_url(target):
     if not target:
-        return None, "No target provided"
+        return None, None, "No target provided"
     if not target.startswith(('http://', 'https://')):
         target = f"https://{target}"
     try:
         parsed = urlparse(target)
         if not parsed.netloc:
-            return None, "Invalid URL: missing hostname"
+            return None, None, "Invalid URL: missing hostname"
         if parsed.scheme not in ('http', 'https'):
-            return None, f"Unsupported scheme: {parsed.scheme}"
-        return target, parsed.netloc
+            return None, None, f"Unsupported scheme: {parsed.scheme}"
+        return target, parsed.netloc, None
     except Exception as e:
-        return None, f"URL parsing error: {e}"
+        return None, None, f"URL parsing error: {e}"
 
 def print_result(title, results, verbose=False):
     print(f"\n[+] {title}:")
@@ -66,37 +72,60 @@ def print_result(title, results, verbose=False):
             print(f"    \033[90m> {r['details']}\033[0m")
 
 def main():
-    parser = argparse.ArgumentParser(description="is-it-safe: Stealthy WAF/IDS/IPS detector v2.0")
-    parser.add_argument("target", help="Target URL or Hostname")
+    import argparse
+    parser = argparse.ArgumentParser(description="is-it-safe: Stealthy WAF/IDS/IPS/fail2ban detector v3.0")
+    parser.add_argument("target", nargs="?", help="Target URL, Hostname, or IP")
+    parser.add_argument("-v", "--version", action="store_true", help="Show version and exit")
     parser.add_argument("-s", "--stealth", action="store_true", help="Enable maximum stealth (higher jitter)")
     parser.add_argument("--timeout", type=int, default=10, help="Request timeout in seconds")
     parser.add_argument("--jitter", action="store_true", help="Add random delays between requests")
     parser.add_argument("--verbose", action="store_true", help="Show detailed detection signals")
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
+    parser.add_argument("--ssh-port", type=int, default=22, help="SSH port for fail2ban detection")
     args = parser.parse_args()
 
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+    if args.version:
+        print("is-it-safe v4.0.0")
+        sys.exit(0)
 
-    url, host = validate_url(args.target)
-    if not url:
-        logger.error(host)
+    url, host, error = validate_url(args.target)
+    
+    if error and not host:
+        host = args.target
+    
+    if not host:
+        logger.error(error or "No target provided")
         sys.exit(1)
 
     if not args.json:
         banner()
-        print(f"[*] Starting scan for {url}...")
+        print(f"[*] Starting scan for {host}...")
     
-    # Run detections
-    waf_results = detect_waf(url, timeout=args.timeout, jitter=args.jitter or args.stealth)
-    network_results = identify_network_layer(url, host=host)
-    ids_results = detect_ids_ips(host, url=url, use_tcp=True)
+    # Check if HTTP service is available
+    http_available = url is not None
+    
+    if http_available:
+        waf_results = detect_waf(url, timeout=args.timeout, jitter=args.jitter or args.stealth)
+        network_results = identify_network_layer(url, host=host)
+    else:
+        waf_results = [{"name": "No HTTP service detected", "confidence": "low", "details": "Target has no web service on port 80/443"}]
+        network_results = [{"name": "No HTTP service detected", "confidence": "low", "details": "Target has no web service on port 80/443"}]
+    
+    # Check for fail2ban on SSH
+    fail2ban_results = detect_fail2ban(host, port=args.ssh_port)
+    
+    # IDS/IPS - only if HTTP available
+    if http_available:
+        ids_results = detect_ids_ips(host, url=url, use_tcp=True)
+    else:
+        ids_results = [{"name": "No HTTP service", "confidence": "low", "details": "Skipped - no web service to test"}]
 
     results = {
-        "target": url,
-        "host": host,
+        "target": host,
+        "http_available": http_available,
         "waf": waf_results,
         "network": network_results,
+        "fail2ban": fail2ban_results,
         "ids_ips": ids_results
     }
 
@@ -104,11 +133,12 @@ def main():
         print(json.dumps(results, indent=2))
     else:
         print("\n" + "="*50)
-        print(f" SCAN RESULTS FOR: {url}")
+        print(f" SCAN RESULTS FOR: {host}")
         print("="*50)
         
         print_result("WAF Detection", waf_results, args.verbose)
         print_result("Network Layer", network_results, args.verbose)
+        print_result("Fail2Ban/SSH", fail2ban_results, args.verbose)
         print_result("IDS/IPS Detection", ids_results, args.verbose)
         
         print("\n" + "="*50)

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "is-it-safe"
 version = "5.0.0"
 authors = [
-  { name="Mithun", email="mithun@example.com" },
+  { name="Mithun", email="mitchastertheblaster@gmail.com" },
 ]
 description = "Stealthy Security Layer Detector (WAF/IDS/IPS/Fail2Ban)"
 readme = "README.md"

@@ -22,13 +22,11 @@ dependencies = [
     "urllib3>=2.0.0",
     "rich>=13.7.0",
     "ipaddress>=1.0.23",
-]
-
-[project.optional-dependencies]
-full = [
     "scapy>=2.5.0",
     "paramiko>=3.4.0",
 ]
+
+[project.optional-dependencies]
 test = [
     "pytest>=7.4.0",
     "pytest-mock>=3.12.0",

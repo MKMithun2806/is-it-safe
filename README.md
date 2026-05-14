@@ -61,20 +61,6 @@ is-it-safe example.com --json > results.json
 > [!IMPORTANT]
 > Some IDS/IPS detection features require **root privileges** for raw socket access.
 
-##  Publishing to PyPI
-
-This project is configured for easy distribution. To publish your own version:
-
-1. **Build the package:**
-   ```bash
-   uv build
-   ```
-2. **Publish to PyPI:**
-   ```bash
-   uv publish
-   ```
-   *Note: You will need a PyPI API token.*
-
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

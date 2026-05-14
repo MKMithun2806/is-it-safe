@@ -8,7 +8,7 @@
 
 `is-it-safe` is a modern, high-performance security utility designed to map and identify protective layers surrounding a target without triggering aggressive defense mechanisms. It provides deep visibility into infrastructure security by fingerprinting WAFs, IDS/IPS, and automated blocking systems.
 
-## 🚀 Key Features
+##  Key Features
 
 *   🛡️ **WAF Fingerprinting:** Identifies 10+ major WAF vendors (Cloudflare, Akamai, AWS, Imperva, etc.) via signature-based and behavioral analysis.
 *   🕵️ **Stealth-First Detection:** Implements adaptive jitter, randomized headers, and low-signal request patterns to bypass basic rate-limiters and heuristics.
@@ -17,7 +17,7 @@
 *   🎨 **Modern Interface:** Built with `rich` for professional, structured terminal output and high-visibility results.
 *   🤖 **Automation Ready:** Native JSON output mode for seamless integration into larger security pipelines.
 
-## 📦 Installation
+##  Installation
 
 ### The Modern Way (Recommended)
 Use [uv](https://github.com/astral-sh/uv) for the fastest experience:
@@ -61,7 +61,7 @@ is-it-safe example.com --json > results.json
 > [!IMPORTANT]
 > Some IDS/IPS detection features require **root privileges** for raw socket access.
 
-## 🚢 Publishing to PyPI
+##  Publishing to PyPI
 
 This project is configured for easy distribution. To publish your own version:
 
@@ -79,5 +79,3 @@ This project is configured for easy distribution. To publish your own version:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-Developed with ❤️ for the security community.

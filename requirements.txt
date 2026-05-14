@@ -1,0 +1,6 @@
+requests>=2.31.0
+urllib3>=2.0.0
+rich>=13.7.0
+ipaddress>=1.0.23
+# Optional: scapy>=2.5.0 (for TCP IDS detection)
+# Optional: paramiko>=3.4.0 (for SSH/Fail2Ban probing)

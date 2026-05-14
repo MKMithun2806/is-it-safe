@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "is-it-safe"
+version = "5.0.0"
+authors = [
+  { name="Mithun", email="mithun@example.com" },
+]
+description = "Stealthy Security Layer Detector (WAF/IDS/IPS/Fail2Ban)"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Security",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "urllib3>=2.0.0",
+    "rich>=13.7.0",
+    "ipaddress>=1.0.23",
+]
+
+[project.optional-dependencies]
+full = [
+    "scapy>=2.5.0",
+    "paramiko>=3.4.0",
+]
+test = [
+    "pytest>=7.4.0",
+    "pytest-mock>=3.12.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mithun/is-it-safe"
+"Bug Tracker" = "https://github.com/mithun/is-it-safe/issues"
+
+[project.scripts]
+is-it-safe = "is_it_safe.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

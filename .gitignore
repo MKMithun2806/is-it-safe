@@ -1,2 +1,7 @@
 .aider*
+__pycache__/
+*.pyc
+dist/
+.venv/
+.pytest_cache/
 bruh.txt

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "is-it-safe"
-version = "5.0.0"
+version = "5.1.0"
 authors = [
   { name="Mithun", email="mitchastertheblaster@gmail.com" },
 ]
@@ -33,8 +33,8 @@ test = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/mithun/is-it-safe"
-"Bug Tracker" = "https://github.com/mithun/is-it-safe/issues"
+"Homepage" = "https://github.com/MKMithun2806/is-it-safe"
+"Bug Tracker" = "https://github.com/MKMithun2806/is-it-safe/issues"
 
 [project.scripts]
 is-it-safe = "is_it_safe.main:main"

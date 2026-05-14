@@ -16,4 +16,5 @@ src/is_it_safe/modules/network.py
 src/is_it_safe/modules/utils.py
 src/is_it_safe/modules/waf.py
 tests/test_core.py
+tests/test_scoring.py
 tests/test_waf.py

@@ -74,6 +74,46 @@ def validate_url(target: str) -> tuple[Optional[str], Optional[str], Optional[st
     except Exception as e:
         return None, None, f"URL parsing error: {e}"
 
+def calculate_score(results: Dict[str, Any]) -> tuple[int, str]:
+    """Calculate a security risk score and safety recommendation."""
+    score = 0
+    
+    weights = {
+        "high": 1.0,
+        "medium": 0.6,
+        "low": 0.2
+    }
+    
+    category_points = {
+        "waf": 40,
+        "ids_ips": 50,
+        "fail2ban": 30,
+        "network": 10
+    }
+    
+    for cat, detections in results.items():
+        if cat not in category_points:
+            continue
+            
+        cat_base = category_points[cat]
+        for d in detections:
+            name = d.get("name", "").lower()
+            conf = d.get("confidence", "low").lower()
+            
+            # Skip negative or informational detections
+            skip_keywords = ["no ", "none", "unable to", "required", "needed", "skipped", "no strong evidence", "generic infrastructure"]
+            if any(x in name for x in skip_keywords):
+                continue
+            
+            score += int(cat_base * weights.get(conf, 0.2))
+            
+    # Cap score at 100
+    score = min(score, 100)
+    
+    # Safe if score is low (under 30)
+    safe = "Yes" if score < 30 else "No"
+    return score, safe
+
 def display_results(results: Dict[str, Any], verbose: bool):
     """Display scan results in a professional table."""
     table = Table(title=f"Scan Results for: [bold]{results['target']}[/bold]", show_header=True, header_style="bold magenta")
@@ -102,6 +142,16 @@ def display_results(results: Dict[str, Any], verbose: bool):
         table.add_section()
         
     console.print(table)
+    
+    # Display Score and Safety Recommendation
+    score = results.get("risk_score", 0)
+    safe = results.get("safe_to_scan", "Yes")
+    
+    score_color = "success" if score < 30 else "warning" if score < 60 else "error"
+    safe_color = "success" if safe == "Yes" else "error"
+    
+    console.print(f"\n[bold]Risk Score:[/] [{score_color}]{score}/100[/]")
+    console.print(f"[bold]Safe to Scan:[/] [{safe_color}]{safe}[/]\n")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -171,11 +221,16 @@ def main():
         "ids_ips": ids_results
     }
 
+    # Calculate score
+    score, safe = calculate_score(results)
+    results["risk_score"] = score
+    results["safe_to_scan"] = safe
+
     if args.json:
         print(json.dumps(results, indent=2))
     else:
         display_results(results, args.verbose)
-        console.print("\n[success]Scan complete.[/]")
+        console.print("[success]Scan complete.[/]")
 
 if __name__ == "__main__":
     main()

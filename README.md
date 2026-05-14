@@ -14,6 +14,7 @@
 *   🕵️ **Stealth-First Detection:** Implements adaptive jitter, randomized headers, and low-signal request patterns to bypass basic rate-limiters and heuristics.
 *   🚦 **IDS/IPS Probing:** Uses low-level TCP signals and HTTP response anomalies to detect deep packet inspection and network-level interception.
 *   🚫 **Fail2Ban Discovery:** Safely identifies SSH tarpits, "honey-pots," and active ban policies through non-destructive authentication probing.
+*   📊 **Risk Scoring:** Intelligent scoring system that evaluates detected security layers and provides a "Safe to Scan" recommendation.
 *   🎨 **Modern Interface:** Built with `rich` for professional, structured terminal output and high-visibility results.
 *   🤖 **Automation Ready:** Native JSON output mode for seamless integration into larger security pipelines.
 
